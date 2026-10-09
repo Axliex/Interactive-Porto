@@ -22,41 +22,62 @@ Keempat halaman detail berikut **menggantikan isi `ProjectDetail.jsx`** sesuai `
 
 ## 1. Detail PC — "Web Development & UI Design"
 
+> **Status terbaru (2026-09): semua preview PC berjalan di layar monitor, tanpa pindah halaman.**
+> `src/components/screens/MonitorScreen.jsx` menggantikan halaman detail: pilih kategori → preview proyek (panah ‹ ›) → klik preview/tombol membuka **Figma atau website** (tab baru). `PCDetail.jsx` sudah **dihapus**, dan `ProjectDetail.jsx` tidak lagi punya kasus `PC`.
+
 ### 1.1 Tujuan
-Menampilkan portofolio proyek dalam dua kategori, dipilih langsung di layar yang sama (bukan pindah halaman/tab baru).
+Menampilkan portofolio proyek dalam dua kategori — **UI Design** dan **Web Development** — sepenuhnya di atas layar monitor yang sudah ada (state PC), tanpa berpindah halaman.
 
 ### 1.2 User Flow
 ```
-[Detail PC dibuka]
+[Objek PC — layar monitor]
         v
-[Layar Pilih Kategori]
-  UI/UX Design      Front-end Web
+[Layar 1 — Pilih Kategori]
+  🎨 UI Design        🧩 Web Development
         |                     |
         v                     v
-[Daftar Proyek UI/UX]   [Daftar Proyek Front-end]
-        |                     |
-        +--- ‹ Kembali -------+
-              (balik ke layar pilih kategori)
+[Layar 2 — Preview Proyek]  ‹ ›  panah di sisi layar (juga ← → keyboard)
+  tag · judul · deskripsi · thumbnail besar
+  counter "n / total" · dot posisi
+        |
+  klik preview atau tombol "Buka di Figma ↗" / "Buka Website ↗"
+        → window.open(url, '_blank') — sesuai `url` proyek
+        |
+  "‹ Kategori" (atau Esc) → balik ke Layar 1
 ```
 
 ### 1.3 Detail Layar
-- **Layar pilih kategori:** dua kartu/tombol besar berdampingan — "🎨 UI/UX Design" dan "🧩 Front-end Web" — masing-masing dengan deskripsi singkat 1 baris.
-- **Layar daftar proyek per kategori:**
-  - Tombol "‹ Kembali" di kiri atas, kembali ke layar pilih kategori (bukan ke Hero — tombol "Kembali ke Objek" di header global tetap terpisah dan tetap ke Hero/Object state).
-  - Grid kartu proyek (2 kolom di desktop, 1 kolom di mobile). Tiap kartu berisi: tag kategori kecil, judul proyek, deskripsi singkat, tombol "Buka tab baru ↗" yang membuka link eksternal (`target="_blank"`).
+- **Layar 1 (`view='choice'`):** header "Monitor · Portofolio" + judul "Web Development & UI Design" (plus "2 kategori · 3 proyek" bila panel lebar). Dua kartu kategori berdampingan (kolom otomatis bila panel sempit/floating): emoji, label, deskripsi, **strip thumbnail proyek yang mengisi badan kartu**, dan baris "n proyek · klik untuk preview". Footer: "Pilih satu kategori — preview proyek tampil langsung di layar ini".
+- **Layar 2 (`view='projects'`):**
+  - Header: tombol **"‹ Kategori"** (kembali ke layar 1), emoji + nama kategori, counter **"n / total"**.
+  - Kolom info (19em): pill tag, judul, deskripsi, dan tombol CTA **"Buka di Figma"** / **"Buka Website"** + catatan "Membuka … di tab baru". Di panel sempit, kolom ini jadi baris di atas preview (container query `.monitor-split` / `.monitor-info`, threshold 640px).
+  - Area preview besar: thumbnail proyek — **klik = buka link**, saat hover muncul CTA apung; **panah ‹ › di sisi kiri/kanan layar** (hanya bila jumlah proyek > 1, posisi wrap: terakhir → pertama) + dot posisi proyek.
+  - Keyboard: **← →** ganti proyek, **Esc** kembali ke pilihan kategori.
+  - Tanpa latar panel saat menempel di monitor; latar hanya di mode floating.
+- Catatan ukuran: font layar memakai container query `.screen-ui-monitor`, jadi seluruh `em` ikut mengecil/membesar mengikuti lebar panel monitor.
 
 ### 1.4 Struktur Data
 ```js
 // PC_CATEGORIES = {
-//   uiux:     { id, label: 'UI/UX Design', emoji: '🎨', description, items: [{ id, title, tag, desc, url }] },
-//   frontend: { id, label: 'Front-end Web', emoji: '🧩', description, items: [{ id, title, tag, desc, url }] },
+//   uiux:     { id, label: 'UI Design',       emoji: '🎨', description, items: [...] },
+//   frontend: { id, label: 'Web Development', emoji: '🧩', description, items: [...] },
 // }
+// items[] = { id, title, tag, desc, thumbnail, type: 'figma' | 'live', url }
 ```
-Isi `items` diisi manual oleh user sesuai proyek asli (judul, tag, deskripsi, link ke live demo/repo/case study).
+- `type: 'figma'` → label CTA "Buka di Figma"; selain itu "Buka Website" (keduanya membuka `url` di tab baru).
+- Menambah proyek = menambah entri di `items` (thumbnail dari folder `public/assets/…`); panah ‹ › otomatis muncul bila proyek dalam kategori > 1.
+- Isi `items` diisi manual oleh user sesuai proyek asli (judul, tag, deskripsi, thumbnail, link Figma/live demo/repo).
 
 ---
 
 ## 2. Detail Phone — "Socials Design"
+
+> **Status terbaru (2026-09): jalur utama pindah ke layar HP di atas meja.**
+> Feed, Grid Galeri, dan tiap postingan kini **diputar langsung di layar smartphone yang tergeletak di meja** (`src/components/screens/PhoneScreen.jsx`) — tidak ada halaman detail baru, tidak ada mock HP besar, dan tidak ada transisi zoom (rasa "mengambil HP"). Konten di dalamnya: beranda profil → view Feed (gambar 3:4, aksi sosial, keterangan) dan view Grid Galeri (2 kolom) — semuanya lewat state internal, kembali lewat tombol ‹ di kiri atas.
+> **Navigasi feed:** panah ‹ › di view Feed kini **geser slide (gambar) dalam satu postingan**, bukan pindah postingan, dan **hanya muncul bila postingan punya banyak gambar** — postingan tunggal tidak menampilkan panah/dot. Pindah postingan dilakukan lewat Grid atau daftar postingan di beranda.
+> **Pilih akun (2026-09):** baris avatar di beranda membuka view **Cari akun** — search ala Instagram (input yang memfilter username/nama/bio + daftar akun, akun aktif ditandai centang, memilih akun kembali ke beranda). Sumber data `accountsData` di `src/data/phoneData.js`: portofolio socials berikutnya cukup ditambah sebagai akun baru; field `avatar` boleh dihilangkan (otomatis jadi inisial berwarna).
+> Rasio kartu/postingan: **3:4 (potret)** sesuai aset (`aspect-[3/4]`), bukan 1:1.
+> `PhoneDetail.jsx` (mock HP besar, section di bawah) **tidak lagi dipanggil** dari jalur layar HP; file dipertahankan bila suatu saat dibuka lewat rute lain.
 
 ### 2.1 Tujuan
 Menampilkan mockup ponsel interaktif berisi desain sosial media, meniru pengalaman lock screen → home screen dari portofolio lama.
@@ -131,7 +152,9 @@ Menampilkan profil singkat + pilihan antara informasi "About Me" dan "Resume", s
 
 ### 4.1 Tujuan & Perubahan Konsep
 Sebelumnya: **1 proyek = 1 buku**.
-**Sekarang: 1 buku berisi banyak proyek**, dipisahkan dengan **pembatas halaman (divider)** — tiap pembatas mewakili satu proyek. Fitur bolak-balik halaman (flip) tetap dipertahankan seperti sebelumnya.
+**Sekarang: 1 buku berisi banyak proyek**, dipisahkan dengan **pembatas halaman (divider)** — tiap pembatas mewakili satu proyek. Fitur bolak-balik halaman kini berupa **buku 3D sungguhan** (lihat 4.4), dan pembukaannya diawali **animasi mengambil buku dari meja**.
+
+**Animasi ambil buku** (`src/components/BookLift.jsx`): saat tombol "Lihat Detail Proyek" diklik, replika sampul buku (maroon + label "BOOK OF BOOKS") muncul **tepat di posisi buku pada foto meja** (anchor: `liftAnchor` di `src/data/objectsData.js`, persen terhadap frame `Book.webp`), lalu terangkat ke tengah layar (translate + scale + rotateX, ±780 ms) sementara scene meja zoom-fade. Saat kembali dari detail, animasinya berjalan terbalik (buku diturunkan kembali ke meja) dan tombol overlay objek baru muncul setelah buku mendarat.
 
 ### 4.2 Struktur Buku
 ```
@@ -145,23 +168,29 @@ Sebelumnya: **1 proyek = 1 buku**.
  └─ Pembatas Halaman: Proyek C
       └─ Halaman isi 1
 ```
-Seluruh halaman (pembatas + isi) digabung jadi satu deret linear ("leaves"), ditampilkan berpasangan sebagai spread kiri-kanan (2 halaman per tampilan), seperti buku fisik terbuka.
+Seluruh halaman (pembatas + isi) digabung jadi satu deret linear ("leaves"), lalu dipetakan ke **lembar fisik dua muka**: lembar ke-k berisi `front = leaves[2k+1]` dan `back = leaves[2k+2]`, berporos di tulang buku. `turn` = jumlah lembar yang sudah dibalik; halaman kiri saat ini = `leaves[2*turn]`, halaman kanan = `leaves[2*turn+1]`.
 
 ### 4.3 User Flow
 ```
-[Detail Book dibuka] → tampil spread pertama (pembatas Proyek A)
+[Tombol "Lihat Detail Proyek"] → animasi buku diangkat dari meja → detail
         |
-  ‹ Sebelumnya   /   Berikutnya ›   → bolak-balik halaman satu per satu
+        |  buku "diletakkan" di layar (animasi bookPlace, 620 ms)
         |
-  Klik tab pembatas (di sisi buku) → lompat langsung ke awal proyek tsb
+  Seret halaman (drag) / klik tepi kiri-kanan / tombol ‹ › / panah keyboard
+        → lembar fisik terbalik 3D (680 ms)
+        |
+  Sticky notes di tepi atas buku → lompat langsung ke awal proyek tsb
+        |
+  "Kembali ke Objek" → buku diturunkan kembali ke meja → scene Book
 ```
 
 ### 4.4 Detail Layar
-- **Area buku:** dua halaman berdampingan (spread), tampilan seperti buku fisik, dengan garis lipatan di tengah.
-  - **Halaman pembatas (divider):** warna khas per proyek, judul proyek + subtitle, ikon bookmark.
-  - **Halaman isi:** background kertas terang, judul sub-halaman + isi teks/gambar proyek.
-- **Tab pembatas di sisi buku:** daftar vertikal (desktop) / horizontal wrap (mobile) berupa label warna-warni menonjol dari sisi buku (meniru bookmark fisik), satu per proyek, tab proyek yang sedang aktif ditandai (misal sedikit menonjol/opacity penuh). Klik tab = lompat ke spread awal proyek tsb.
-- **Navigasi halaman:** tombol panah kiri/kanan + indikator "halaman X / Y", dengan animasi flip halaman (transform rotate berbasis CSS, arah kiri untuk mundur, arah kanan untuk maju).
+- **Buku 3D** (`src/components/details/FlipBook.jsx`): `perspective: 2600px`, tiap lembar `transform: rotateY()` berporos di sisi kiri (tulang buku) dengan dua muka `backface-visibility: hidden`, bayangan tulang di tengah, tepi halaman (page block) di sisi luar, serta sampul maroon di belakang. Buku sedikit dimiringkan (`rotateX(6deg)`) supaya terasa seperti diletakkan di meja.
+- **Interaksi membalik:** seret halaman ke kiri/kanan (progress mengikuti pointer, lepas untuk menyelesaikan/mengembalikan), klik tepi kiri/kanan, tombol ‹ Sebelumnya / Berikutnya ›, dan panah ←/→ keyboard. Saat halaman terbang ada bayangan lembut (`flipShade`) di atas buku.
+- **Sticky notes pemilih proyek:** 5 note pastel (kuning/pink/hijau/biru/ungu) dengan strip warna `spineColor`, menempel di tepi atas buku dan **setengah tertutup balik buku** (terlihat seperti catatan yang dijepit). Note proyek aktif terangkat + ring putih; hover mengangkat sedikit; klik = lompat ke bab proyek.
+- **Divider:** warna khas per proyek, "Bab N", judul + subtitle, ikon bookmark, nomor halaman `n / total`.
+- **Halaman isi:** gambar halaman buku (`object-contain`) + nomor halaman.
+- **Navigasi:** indikator "Halaman X–Y dari Z" + judul proyek aktif.
 
 ### 4.5 Struktur Data
 ```js
@@ -180,12 +209,30 @@ Urutan array `BOOK_CHAPTERS` = urutan proyek di dalam buku. Tiap proyek boleh pu
 ## 5. Ringkasan Assets yang Dibutuhkan
 | Fitur | Asset yang perlu disiapkan user |
 |---|---|
-| PC | Link eksternal (live demo/repo) per proyek UI/UX & Front-end |
+| PC | Thumbnail preview + link Figma/website per proyek (UI Design & Web Development) |
 | Phone | Gambar desain sosial media (webp/png) per item Proyek & Postingan |
 | Paper | Foto profil, file PDF resume |
 | Book | Tidak wajib gambar — bisa teks saja per halaman; gambar opsional bila mau ditambah nanti |
 
 ## 6. Catatan Implementasi
-- Semua komponen baru sebaiknya dipisah per fitur (mis. `PCDetail.jsx`, `PhoneDetail.jsx`, `ProfileResumeDetail.jsx`, `BookDetail.jsx`) dan datanya dipisah ke file data tersendiri (`pcData.js`, `phoneData.js`, `profileData.js`, `bookData.js`) supaya mudah diedit user tanpa menyentuh logic komponen.
-- `ProjectDetail.jsx` cukup berperan sebagai router: pilih komponen sesuai `objectKey`, tetap render header umum (tombol kembali + label objek) di luar komponen fitur.
+- Semua komponen baru sebaiknya dipisah per fitur (mis. `MonitorScreen.jsx`, `PhoneScreen.jsx`, `PaperScreen.jsx`, `BookDetail.jsx`) dan datanya dipisah ke file data tersendiri (`pcData.js`, `phoneData.js`, `profileData.js`, `bookData.js`) supaya mudah diedit user tanpa menyentuh logic komponen.
+- `ProjectDetail.jsx` cukup berperan sebagai router: pilih komponen sesuai `objectKey`, tetap render header umum (tombol kembali + label objek) di luar komponen fitur. Kasus `PC` dan `Phone` sudah tidak lewat router ini — keduanya berjalan di layar objeknya masing-masing.
 - Ikuti gaya visual & class utility yang sudah ada di proyek (`.glass-panel`, font ExtraLight/Regular, warna aksen putih) agar konsisten dengan scene 3D meja kerja.
+
+---
+
+## 7. Entry Langsung dari Layar Objek (tambahan implementasi)
+
+Sebagian besar detail kini dibuka **dari "layar" objek itu sendiri**, bukan dari tombol overlay:
+
+| Objek | Entry | Route (`detailRoute` di `App.jsx`) |
+|---|---|---|
+| PC | pilih kategori → preview proyek + panah ‹ › di layar monitor | **tidak lewat halaman detail** — berjalan di tempat (`MonitorScreen`); klik preview membuka Figma/website (`window.open`) |
+| Paper | teks "About Me" / "Resume" di kertas | `{ tab: 'about' \| 'resume', section, focus }` |
+| Phone | Feed / Grid / kartu postingan di layar HP | **tidak lewat halaman detail** — berjalan di tempat (`PhoneScreen`) |
+| Book | tombol "Lihat Detail Proyek" di overlay | animasi **ambil buku dari meja** dulu, baru detail; `route` opsional `{ projectId }` untuk membuka langsung di bab proyek tsb |
+
+- `src/data/objectsData.js` → `screenEntry: true` + `screenHint` menampilkan pill petunjuk (ikon `MousePointerClick`) di footer `ObjectOverlay`; tombol "Lihat Detail Proyek" hanya dirender bila `hasDetail && !screenEntry` (praktisnya: hanya Book).
+- `src/data/screensLayout.js` → rect % frame WebP untuk area layar monitor/kertas/HP; `src/components/ObjectScreen.jsx` memetakkannya ke kanvas 16:9 dan otomatis **melepas (floating)** bila tidak muat di viewport.
+- **Latar panel dihapus:** monitor dan kertas kini tanpa latar panel (hanya isi: grid kartu proyek; tombol About Me & Resume), agar menyatu dengan foto objek. Mode floating tetap diberi latar (`bg-[#05070a]/95` monitor, `bg-[#f7f4ec]/95` kertas) supaya teks tetap terbaca. Header/footer panel monitor (label PORTOFOLIO, pill hint, footer petunjuk) ikut dihapus.
+- Route diteruskan `App.jsx` → `ProjectDetail` (`route`) → props `initial*` di tiap komponen detail (Paper & Book; PC dan Phone tidak lewat sini).

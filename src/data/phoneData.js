@@ -1,3 +1,12 @@
+// Data akun untuk layar HP (PhoneScreen).
+// Fitur "Cari & ganti akun" membaca array ini — untuk portofolio socials
+// berikutnya cukup tambahkan object baru ke array, strukturnya:
+//   {
+//     username, name, avatar?, bio,
+//     stats: { posts, followers, following },
+//     posts: [{ id, images: [path...], title, caption }]
+//   }
+// `avatar` boleh dihilangkan — UI otomatis menampilkan inisial berwarna.
 export const accountsData = [
   {
     username: "monkbike.jogja",

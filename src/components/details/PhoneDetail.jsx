@@ -2,13 +2,31 @@ import React, { useState, useEffect } from 'react';
 import { accountsData } from '../../data/phoneData';
 import { ChevronUp, ChevronLeft, ChevronRight, Lock, Unlock, Wifi, Battery, Signal, Grid, Bookmark, Heart, MessageCircle, Share2, Sparkles } from 'lucide-react';
 
-export default function PhoneDetail() {
-  const [isLocked, setIsLocked] = useState(true);
+/**
+ * Detail Phone — "Socials Design".
+ *
+ * Catatan: preview di layar HP (PhoneScreen) sudah berjalan di tempat, jadi
+ * komponen ini tidak lagi dipanggil dari jalur tersebut. `initialLocked` /
+ * `initialTab` / `initialPostIndex` dipertahankan bila detail dibuka lewat
+ * rute lain.
+ */
+export default function PhoneDetail({
+  initialLocked = true,
+  initialTab = null,
+  initialPostIndex = undefined,
+}) {
+  const firstAccount = accountsData[0];
+  const safePostIndex =
+    typeof initialPostIndex === 'number'
+      ? Math.min(Math.max(initialPostIndex, 0), firstAccount.posts.length - 1)
+      : 0;
+
+  const [isLocked, setIsLocked] = useState(initialLocked !== false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [activeAccountIndex, setActiveAccountIndex] = useState(0);
-  const [activePostIndex, setActivePostIndex] = useState(0);
+  const [activePostIndex, setActivePostIndex] = useState(safePostIndex);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [activeTab, setActiveTab] = useState('posts'); // 'posts' | 'grid'
+  const [activeTab, setActiveTab] = useState(initialTab === 'grid' ? 'grid' : 'posts'); // 'posts' | 'grid'
 
   const account = accountsData[activeAccountIndex] || accountsData[0];
   const post = account.posts[activePostIndex];
@@ -193,7 +211,7 @@ export default function PhoneDetail() {
             {activeTab === 'posts' && post ? (
               <div className="flex-1 flex flex-col justify-between p-3 overflow-y-auto no-scrollbar">
                 {/* Image Display with Carousel controls */}
-                <div className="relative w-full aspect-square bg-black rounded-xl overflow-hidden border border-neutral-800 flex items-center justify-center group">
+                <div className="relative w-full aspect-[3/4] bg-black rounded-xl overflow-hidden border border-neutral-800 flex items-center justify-center group">
                   <img
                     src={post.images[activeImageIndex] || post.images[0]}
                     alt={post.title}
@@ -269,7 +287,7 @@ export default function PhoneDetail() {
                       setActiveImageIndex(0);
                       setActiveTab('posts');
                     }}
-                    className="relative aspect-square rounded-lg overflow-hidden bg-neutral-900 border border-neutral-800 hover:border-blue-400/50 transition-all cursor-pointer group"
+                    className="relative aspect-[3/4] rounded-lg overflow-hidden bg-neutral-900 border border-neutral-800 hover:border-blue-400/50 transition-all cursor-pointer group"
                   >
                     <img
                       src={p.images[0]}

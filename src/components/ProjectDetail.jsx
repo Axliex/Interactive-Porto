@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Layers, Sparkles } from 'lucide-react';
-import PCDetail from './details/PCDetail';
 import PhoneDetail from './details/PhoneDetail';
 import PaperDetail from './details/PaperDetail';
 import BookDetail from './details/BookDetail';
@@ -8,6 +7,7 @@ import BookDetail from './details/BookDetail';
 export default function ProjectDetail({
   objectKey,
   objectData,
+  route = {},
   onBack,
 }) {
   const [isExiting, setIsExiting] = useState(false);
@@ -19,17 +19,33 @@ export default function ProjectDetail({
     }, 450);
   };
 
-  // Render specific detail content based on objectKey
+  // Render specific detail content based on objectKey.
+  // `route` membawa tujuan langsung dari preview di layar objek:
+  // Paper  -> { tab: 'about' | 'resume', section, focus }
+  // Book   -> { projectId } (buku terbuka langsung di bab proyek tsb)
+  // PC     -> sudah dipindah seluruhnya ke layar monitor (MonitorScreen):
+  //           pilih kategori → preview proyek → buka link Figma/website.
+  // Phone  -> sudah dipindah ke preview di tempat (PhoneScreen), bukan halaman ini.
   const renderDetailContent = () => {
     switch (objectKey) {
-      case 'PC':
-        return <PCDetail />;
       case 'Phone':
-        return <PhoneDetail />;
+        return (
+          <PhoneDetail
+            initialLocked={route.locked}
+            initialTab={route.tab || null}
+            initialPostIndex={route.postIndex}
+          />
+        );
       case 'Paper':
-        return <PaperDetail />;
+        return (
+          <PaperDetail
+            initialTab={route.tab || null}
+            initialSection={route.section}
+            initialFocus={route.focus || null}
+          />
+        );
       case 'Book':
-        return <BookDetail />;
+        return <BookDetail initialProjectId={route.projectId || null} />;
       default:
         return (
           <div className="my-auto text-center">

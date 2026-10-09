@@ -1,7 +1,15 @@
+/**
+ * Kategori & proyek yang ditampilkan di layar monitor (state PC).
+ * Alur di monitor: pilih kategori (UI Design / Web Development) → preview
+ * proyek diganti dengan panah ‹ › → klik preview membuka `url` (Figma/website).
+ *
+ * Menambah proyek: cukup tambahkan entri di `items` — field yang dipakai:
+ *   id, title, tag, desc, thumbnail (gambar preview), type ('figma'|'live'), url
+ */
 export const PC_CATEGORIES = {
   uiux: {
     id: 'uiux',
-    label: 'UI/UX Design',
+    label: 'UI Design',
     emoji: '🎨',
     description: 'Rancangan antarmuka pengguna interaktif, prototype aplikasi mobile, dan sistem desain.',
     items: [
@@ -19,7 +27,7 @@ export const PC_CATEGORIES = {
   },
   frontend: {
     id: 'frontend',
-    label: 'Front-end Web',
+    label: 'Web Development',
     emoji: '🧩',
     description: 'Pengembangan antarmuka web interaktif, animasi 3D, responsive layout, dan integrasi API.',
     items: [

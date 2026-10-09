@@ -78,6 +78,121 @@
   }
 }
 
+/* Intro: gelombang sonar mengelilingi lingkaran judul,
+   melebar terus sampai menjangkau tepi layar (end-size pakai vmax). */
+/* Intro — lingkaran berubah jadi putih saat hover:
+   ease-in-out (0.42, 0, 0.58, 1) selama 300ms.
+   Ditulis manual di sini (bukan utility Tailwind) karena `transition-*`
+   menaruh timing-function default-nya di urutan CSS yang menang. */
+.intro-circle-btn {
+  transition-property: background-color, border-color, color, box-shadow,
+    transform;
+  transition-duration: 300ms;
+  transition-timing-function: cubic-bezier(0.42, 0, 0.58, 1);
+  /* Layer sendiri yang stabil: perubahan anak (cincin mount/unmount) tidak
+     memaksa tombol putih di-raster ulang -> menghilangkan kedipan. */
+  will-change: transform;
+}
+
+/* Intro: riak air tiap hover (beberapa cincin konsentris).
+   PERFORMA — jangan kembali ke animasi `width`/`height`: ukuran 446px ->
+   ~diagonal layar membuat layout + paint ~5 x 4 juta px per frame (berat).
+   Diganti dua animasi terpisah:
+   - `introWaveGeom`  : scale + opacity. Keduanya properti compositor, jadi
+     pertumbuhan cincin jalan di GPU tanpa layout/paint tiap frame.
+   - `introWaveStyle` : box-shadow (ketebalan + warna) di thread utama, tapi
+     elemennya tetap seukuran lingkaran (tidak ikut membesar) sehingga
+     raster ulang hanya ~446px x 446px per cincin.
+   Dipisah agar animasi geometri tetap memenuhi syarat compositor.
+   `will-change` menjaga tiap cincin punya layer stabil (anti-kedip).
+   CATATAN: pakai box-shadow, BUKAN border — Chrome membulatkan border-width
+   ke piksel bulat (1.4px -> 1px), sehingga taper 7px -> 1.4px di layar tidak
+   bisa dibuat. box-shadow spread mendukung nilai pecahan. */
+.intro-wave {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  /* Cincin = bayangan hard (spread tanpa blur) di luar lingkaran. */
+  box-shadow: 0 0 0 7px rgba(255, 255, 255, 0.85);
+  /* Transparan selama animation-delay (cincin menunggu giliran),
+     baru muncul 0.9 saat animasinya mulai — fill-mode hanya `forwards`. */
+  opacity: 0;
+  pointer-events: none;
+  contain: layout;
+  will-change: transform;
+  animation:
+    introWaveGeom 5s cubic-bezier(0.25, 0.5, 0.3, 1) forwards,
+    introWaveStyle 5s linear forwards;
+}
+
+/* Geometri — cuma transform + opacity (compositor).
+   Skala akhir = 1.06 x diagonal layar (diitung JS di tombol sebagai
+   `--wave-scale`), jadi cincin selalu menjangkau sudut layar pada rasio
+   apa pun, sambil tetap melambat (easing) di sepanjang jalurnya. */
+@keyframes introWaveGeom {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.9;
+  }
+  55% {
+    opacity: 0.55;
+  }
+  80% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(var(--wave-scale, 3.9));
+    opacity: 0;
+  }
+}
+
+/* Garis — 7px tepat di lingkaran -> 1.4px di tepi layar (makin jauh makin
+   tipis). Karena cincin ikut diskalakan, spread harus dibagi scale supaya
+   KETEBALAN DI LAYAR turun monoton: (7 - 5.6 * E) / (1 + (K-1) * E),
+   E = posisi easing di tiap stop (0 / 0.278 / 0.552 / ... / 1), K = scale.
+   Timing linear; interpolasi antar-stop menjaga profil tebal monoton. */
+@keyframes introWaveStyle {
+  0% {
+    box-shadow: 0 0 0 7px rgba(255, 255, 255, 0.85);
+  }
+  12.5% {
+    box-shadow: 0 0 0 calc(5.45px / (1 + 0.278 * (var(--wave-scale, 3.9) - 1)))
+      rgba(255, 255, 255, 0.7);
+  }
+  25% {
+    box-shadow: 0 0 0 calc(3.91px / (1 + 0.552 * (var(--wave-scale, 3.9) - 1)))
+      rgba(255, 255, 255, 0.55);
+  }
+  37.5% {
+    box-shadow: 0 0 0 calc(2.83px / (1 + 0.745 * (var(--wave-scale, 3.9) - 1)))
+      rgba(255, 255, 255, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 calc(2.17px / (1 + 0.863 * (var(--wave-scale, 3.9) - 1)))
+      rgba(255, 255, 255, 0.35);
+  }
+  62.5% {
+    box-shadow: 0 0 0 calc(1.77px / (1 + 0.933 * (var(--wave-scale, 3.9) - 1)))
+      rgba(255, 255, 255, 0.28);
+  }
+  75% {
+    box-shadow: 0 0 0 calc(1.55px / (1 + 0.974 * (var(--wave-scale, 3.9) - 1)))
+      rgba(255, 255, 255, 0.22);
+  }
+  87.5% {
+    box-shadow: 0 0 0 calc(1.43px / (1 + 0.994 * (var(--wave-scale, 3.9) - 1)))
+      rgba(255, 255, 255, 0.17);
+  }
+  100% {
+    box-shadow: 0 0 0 calc(1.4px / var(--wave-scale, 3.9))
+      rgba(255, 255, 255, 0.12);
+  }
+}
+
 /* Zoom Transition for Project Details */
 .zoom-in-enter {
   animation: zoomInEnter 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -116,6 +231,138 @@
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.14);
 }
+
+/* =========================================================
+   Book of Books — buku 3D (halaman terbalik sungguhan) + sticky notes
+   ========================================================= */
+.book-stage {
+  perspective: 2600px;
+}
+
+.book-3d {
+  transform-style: preserve-3d;
+  transform: rotateX(6deg);
+  animation: bookPlace 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Buku "diletakkan" di depan layar setelah diangkat dari meja */
+@keyframes bookPlace {
+  0% {
+    transform: translateY(-70px) rotateX(-42deg) scale(1.07);
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) rotateX(6deg) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Bayangan lembut saat halaman terbang */
+@keyframes flipShade {
+  0% {
+    opacity: 0;
+  }
+  45% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Sticky notes pemilih proyek (setengah tertutup tepi atas buku) */
+.sticky-note {
+  transform: rotate(var(--rot, 0deg));
+  transform-origin: bottom center;
+}
+
+.sticky-note:hover {
+  transform: rotate(0deg) translateY(-6px);
+}
+
+.sticky-note[data-active='true'] {
+  transform: rotate(0deg) translateY(-10px) scale(1.05);
+}
+
+/* =========================================================
+   Layar interaktif objek (monitor PC / kertas / smartphone)
+   Font mengikuti lebar panel lewat container query,
+   deklarasi pertama berfungsi sebagai fallback px.
+   ========================================================= */
+.screen-ui-monitor {
+  font-size: 14px;
+  font-size: clamp(12px, 1.15cqw, 15px);
+  line-height: 1.45;
+}
+
+.screen-ui-paper {
+  font-size: 15px;
+  font-size: clamp(13px, 4.1cqw, 17px);
+  line-height: 1.5;
+}
+
+.screen-ui-phone {
+  font-size: 10px;
+  font-size: clamp(9px, 3.85cqw, 11px);
+  line-height: 1.45;
+}
+
+/* Monitor: satu kolom secara default, dua kolom bila panel cukup lebar */
+.monitor-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@container (min-width: 700px) {
+  .monitor-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Monitor — view preview proyek:
+   kolom (panel sempit / floating) → baris (panel monitor cukup lebar) */
+.monitor-split {
+  flex-direction: column;
+}
+
+.monitor-info {
+  width: 100%;
+}
+
+.monitor-wide {
+  display: none;
+}
+
+.monitor-desc {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@container (min-width: 640px) {
+  .monitor-split {
+    flex-direction: row;
+  }
+
+  .monitor-info {
+    width: 19em;
+    flex-shrink: 0;
+  }
+
+  .monitor-wide {
+    display: block;
+  }
+
+  .monitor-desc {
+    display: block;
+    overflow: visible;
+    -webkit-line-clamp: unset;
+  }
+}
+
 
 /* Custom range slider styling */
 input[type="range"] {

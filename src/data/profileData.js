@@ -29,6 +29,7 @@ export const ABOUT_SECTIONS = [
     id: "pengalaman",
     emoji: "💼",
     label: "Pengalaman Kerja & Proyek",
+    shortLabel: "Pengalaman Kerja",
     items: [
       {
         title: "Lead Book Designer & Layouter",
@@ -47,6 +48,7 @@ export const ABOUT_SECTIONS = [
     id: "sertifikasi",
     emoji: "📜",
     label: "Sertifikasi & Pelatihan",
+    shortLabel: "Sertifikasi",
     items: [
       {
         title: "Frontend Web Development Specialist",

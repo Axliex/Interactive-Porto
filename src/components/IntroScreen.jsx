@@ -1,69 +1,144 @@
-import React from 'react';
-import { ArrowRight, Volume2, Sparkles } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+
+// Gelombang: hover hanya PEMICU. Cincin pertama muncul saat hover mulai,
+// lalu selama hover masih aktif satu cincin baru terus terbit tiap 1000ms
+// (konstan). Saat kursor keluar spawn berhenti; cincin yang sudah ada
+// dibiarkan habis animasinya sendiri.
+const WAVE_INTERVAL = 1000; // jeda antar cincin selama hover (ms)
+// Durasi animasi CSS per cincin = 5s (lihat @keyframes di index.css),
+// tapi cincin sudah keluar layar jauh sebelum itu. Dipotong di 3600ms
+// supaya tidak ada layer mati yang tetap diraster; jumlah cincin hidup
+// jadi stabil di ~4 (3600/1000) alih-alih 13.
+const RING_MS = 3600;
+// Safety net kalau timer tertahan (tab background): cincin hidup dibatasi.
+const MAX_RINGS = 12;
 
 export default function IntroScreen({ onStart }) {
+  const [hovered, setHovered] = useState(false);
+  const [waves, setWaves] = useState([]);
+  const hoveredRef = useRef(false);
+  const nextIdRef = useRef(0);
+  const timersRef = useRef([]);
+  const activeRingsRef = useRef(0);
+  const circleRef = useRef(null);
+
+  useEffect(() => () => timersRef.current.forEach(clearTimeout), []);
+
+  // Skala gelombang = (1.06 x diagonal layar) / diameter lingkaran.
+  // Dipakai keyframes CSS untuk membesar lewat `transform: scale()` (murah,
+  // di compositor) dan sekaligus membagi spread box-shadow supaya garis
+  // makin tipis saat menjauh. Tanpa ini ukurannya harus lewat animasi
+  // width/height yang memaksa layout+paint raksasa tiap frame.
+  useEffect(() => {
+    const updateWaveScale = () => {
+      const el = circleRef.current;
+      if (!el) return;
+      // clientWidth = padding box = referensi `width: 100%` pada cincin,
+      // jadi skala 1 benar-benar seukuran lingkaran.
+      const base = el.clientWidth;
+      if (!base) return;
+      const diagonal = Math.hypot(window.innerWidth, window.innerHeight);
+      el.style.setProperty('--wave-scale', ((diagonal * 1.06) / base).toFixed(4));
+    };
+    updateWaveScale();
+    window.addEventListener('resize', updateWaveScale);
+    return () => window.removeEventListener('resize', updateWaveScale);
+  }, []);
+
+  // Satu cincin, dihapus lagi setelah RING_MS (sudah di luar layar).
+  const spawnWave = () => {
+    if (activeRingsRef.current >= MAX_RINGS) return;
+    const id = ++nextIdRef.current;
+    activeRingsRef.current += 1;
+    setWaves((list) => [...list, id]);
+    const timer = setTimeout(() => {
+      setWaves((list) => list.filter((w) => w !== id));
+      timersRef.current = timersRef.current.filter((t) => t !== timer);
+      activeRingsRef.current -= 1;
+    }, RING_MS);
+    timersRef.current.push(timer);
+  };
+
+  const handleEnter = () => {
+    setHovered(true);
+    if (!hoveredRef.current) {
+      hoveredRef.current = true;
+      spawnWave(); // cincin pertama langsung saat hover dimulai
+    }
+  };
+
+  const handleLeave = () => {
+    setHovered(false);
+    hoveredRef.current = false;
+  };
+
+  // Selama hover: interval tetap 1000ms tanpa burst.
+  useEffect(() => {
+    if (!hovered) return undefined;
+    const iv = setInterval(spawnWave, WAVE_INTERVAL);
+    return () => clearInterval(iv);
+  }, [hovered]);
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-black text-white px-6 py-12 select-none overflow-hidden">
       {/* Background Subtle Gradient */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(40,40,50,0.4)_0%,rgba(0,0,0,0.95)_70%)] pointer-events-none" />
 
-      {/* Top Bar / Header */}
-      <header className="relative z-10 w-full max-w-5xl flex items-center justify-between opacity-80 animate-fade-in">
-        <div className="flex items-center space-x-2">
-          <div className="w-2 h-2 rounded-full bg-white/70 animate-pulse" />
-          <span className="text-xs uppercase tracking-[0.3em] font-extralight text-neutral-400">
-            Portfolio Interaktif
-          </span>
-        </div>
-        <div className="text-xs tracking-wider font-extralight text-neutral-500">
-          3D Desk Workspace
-        </div>
-      </header>
-
       {/* Center Content */}
-      <main className="relative z-10 max-w-xl text-center flex flex-col items-center my-auto">
-        <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full border border-white/10 bg-white/5 text-neutral-300 text-xs tracking-widest font-extralight mb-6">
-          <Sparkles className="w-3.5 h-3.5 text-neutral-400" />
-          <span>Eksplorasi Meja Kerja 3D</span>
-        </div>
+      <main className="relative z-10 flex flex-col items-center my-auto">
+        {/* Judul tetap sebagai h1 (a11y), tampilannya ada di dalam lingkaran */}
+        <h1 className="sr-only">Profile &amp; Portfolio — Faisal Ikhwan</h1>
 
-        <h1 className="text-4xl md:text-6xl font-extralight tracking-tight leading-tight mb-4 text-white">
-          Ruang Kerja & <br />
-          <span className="font-normal text-neutral-200">Karya Interaktif</span>
-        </h1>
+        {/* Lingkaran = tombol utama (klik -> onStart) */}
+        <button
+          type="button"
+          ref={circleRef}
+          onClick={onStart}
+          onPointerEnter={handleEnter}
+          onPointerLeave={handleLeave}
+          onFocus={handleEnter}
+          onBlur={handleLeave}
+          aria-label="Mulai — masuk ke meja kerja"
+          className={`intro-circle-btn relative grid aspect-square w-[min(74vmin,56vh,28rem)] place-items-center rounded-full border cursor-pointer active:scale-95 ${
+            hovered
+              ? 'border-white bg-white text-black shadow-[0_0_60px_rgba(255,255,255,0.35)]'
+              : 'border-white/80 bg-transparent text-white'
+          }`}
+        >
+          {/* Gelombang: satu cincin baru tiap 1000ms selama hover */}
+          {waves.map((id) => (
+            <span key={id} aria-hidden="true" className="intro-wave" />
+          ))}
 
-        <p className="text-sm md:text-base font-extralight text-neutral-400 max-w-md mx-auto leading-relaxed mb-10">
-          Jelajahi setiap sudut dan objek di atas meja untuk menelusuri proyek, konsep, dan pengalaman interaktif.
-        </p>
-
-        {/* Action Button: "Lanjut" */}
-        <div className="relative flex items-center justify-center">
-          {/* Sonar Ripple Waves */}
-          <div className="sonar-wave sonar-wave-1 border-white/40" />
-          <div className="sonar-wave sonar-wave-2 border-white/30" />
-          <div className="sonar-wave sonar-wave-3 border-white/20" />
-
-          <button
-            onClick={onStart}
-            className="group relative z-10 flex items-center space-x-3 px-8 py-4 rounded-full bg-white text-black hover:bg-neutral-200 transition-all duration-300 shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:shadow-[0_0_40px_rgba(255,255,255,0.4)] cursor-pointer active:scale-95"
-            aria-label="Lanjut ke Meja Kerja"
+          {/* Label default */}
+          <span
+            aria-hidden="true"
+            className={`px-[7%] text-center text-[min(5.9vmin,4.5vh,2.24rem)] font-extralight leading-[1.35] tracking-tight transition-opacity duration-200 ${
+              hovered ? 'opacity-0' : 'opacity-100'
+            }`}
           >
-            <span className="text-sm font-normal tracking-wider">Lanjut</span>
-            <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
-          </button>
-        </div>
-      </main>
+            Profile &amp; Portfolio
+            <br />
+            <span
+              className={`font-normal transition-colors duration-200 ${
+                hovered ? 'text-black' : 'text-neutral-200'
+              }`}
+            >
+              Faisal Ikhwan
+            </span>
+          </span>
 
-      {/* Footer Info & Music Badge */}
-      <footer className="relative z-10 flex flex-col items-center space-y-2 text-center text-xs font-extralight text-neutral-500">
-        <div className="flex items-center space-x-2 bg-neutral-900/60 border border-white/10 px-3.5 py-1.5 rounded-full text-neutral-400">
-          <Volume2 className="w-3.5 h-3.5 text-neutral-300" />
-          <span className="tracking-wide">BGM: Rainy Days on the Sidewalk — Mondo Gascaro</span>
-        </div>
-        <p className="text-[11px] text-neutral-600">
-          Klik 'Lanjut' untuk memulai pengalaman audio & visual
-        </p>
-      </footer>
+          {/* Label saat hover */}
+          <span
+            aria-hidden="true"
+            className={`absolute inset-0 grid place-items-center text-[min(11vmin,8.5vh,4.4rem)] font-normal tracking-tight transition-opacity duration-200 ${
+              hovered ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
+            Go
+          </span>
+        </button>
+      </main>
     </div>
   );
 }

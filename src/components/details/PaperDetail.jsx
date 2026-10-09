@@ -1,14 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PROFILE, ABOUT_SECTIONS, RESUME } from '../../data/profileData';
 import { User, FileText, ChevronDown, ChevronRight, Download, Sparkles, GraduationCap, Briefcase, Award, Code2 } from 'lucide-react';
 
-export default function PaperDetail() {
-  const [activeTab, setActiveTab] = useState('about'); // 'about' | 'resume'
-  const [expandedSection, setExpandedSection] = useState('pendidikan'); // 'pendidikan' | 'pengalaman' | 'sertifikasi' | null
+/**
+ * Detail Paper — "Profile & Resume".
+ *
+ * `initialTab` / `initialSection` / `initialFocus` dipakai oleh teks interaktif
+ * di atas kertas (PaperScreen) supaya langsung membuka bagian yang dipilih:
+ *   - tab:      'about' | 'resume'
+ *   - section:  id accordion pada About Me (pendidikan/pengalaman/sertifikasi) atau null
+ *   - focus:    'learning' | 'skills' | 'download' (di-scroll + disorot sebentar)
+ */
+export default function PaperDetail({
+  initialTab = null,
+  initialSection = undefined,
+  initialFocus = null,
+}) {
+  const [activeTab, setActiveTab] = useState(initialTab === 'resume' ? 'resume' : 'about'); // 'about' | 'resume'
+  const [expandedSection, setExpandedSection] = useState(
+    initialSection !== undefined
+      ? initialSection
+      : initialTab === 'resume'
+        ? null
+        : 'pendidikan'
+  ); // 'pendidikan' | 'pengalaman' | 'sertifikasi' | null
+  const [highlight, setHighlight] = useState(initialFocus || initialSection || null);
+
+  const targetRefs = useRef({});
 
   const toggleSection = (id) => {
     setExpandedSection((prev) => (prev === id ? null : id));
   };
+
+  // Scroll + sorot bagian yang dipilih dari teks di kertas
+  useEffect(() => {
+    const target = initialFocus || initialSection;
+    if (!target) return undefined;
+
+    let glowTimer;
+    const scrollTimer = setTimeout(() => {
+      const el = targetRefs.current[target];
+      if (el && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      setHighlight(target);
+      glowTimer = setTimeout(() => setHighlight(null), 2600);
+    }, 180);
+
+    return () => {
+      clearTimeout(scrollTimer);
+      clearTimeout(glowTimer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const glow = (id) =>
+    highlight === id
+      ? 'ring-2 ring-amber-400/70 border-amber-400/60 shadow-[0_0_28px_rgba(251,191,36,0.25)]'
+      : '';
 
   return (
     <div className="w-full max-w-4xl mx-auto my-auto animate-fade-in text-white py-4 px-2 select-none">
@@ -87,7 +136,10 @@ export default function PaperDetail() {
               return (
                 <div
                   key={sec.id}
-                  className="glass-panel rounded-2xl border border-white/10 overflow-hidden transition-all duration-300"
+                  ref={(el) => {
+                    targetRefs.current[sec.id] = el;
+                  }}
+                  className={`glass-panel rounded-2xl border transition-all duration-300 overflow-hidden ${glow(sec.id) || 'border-white/10'}`}
                 >
                   <button
                     onClick={() => toggleSection(sec.id)}
@@ -139,7 +191,12 @@ export default function PaperDetail() {
           </div>
 
           {/* Skill Learning Chips */}
-          <div className="glass-panel p-5 rounded-2xl border border-white/10">
+          <div
+            ref={(el) => {
+              targetRefs.current['learning'] = el;
+            }}
+            className={`glass-panel p-5 rounded-2xl border transition-all duration-300 ${glow('learning') || 'border-white/10'}`}
+          >
             <div className="flex items-center space-x-2 text-xs font-extralight uppercase tracking-widest text-neutral-400 mb-3">
               <Code2 className="w-3.5 h-3.5 text-amber-400" />
               <span>Hal Baru yang Sedang Saya Pelajari</span>
@@ -210,7 +267,12 @@ export default function PaperDetail() {
           </div>
 
           {/* Skills Badges */}
-          <div className="glass-panel p-5 rounded-2xl border border-white/10">
+          <div
+            ref={(el) => {
+              targetRefs.current['skills'] = el;
+            }}
+            className={`glass-panel p-5 rounded-2xl border transition-all duration-300 ${glow('skills') || 'border-white/10'}`}
+          >
             <h3 className="text-xs font-extralight uppercase tracking-widest text-neutral-400 mb-3">
               Keahlian & Perangkat Lunak
             </h3>
@@ -227,7 +289,12 @@ export default function PaperDetail() {
           </div>
 
           {/* Download Resume Action */}
-          <div className="flex justify-end pt-2">
+          <div
+            ref={(el) => {
+              targetRefs.current['download'] = el;
+            }}
+            className={`flex justify-end pt-2 rounded-2xl p-2 transition-all duration-300 ${glow('download')}`}
+          >
             <a
               href="mailto:isalikhwan165@gmail.com"
               className="px-6 py-3 rounded-full bg-amber-400 hover:bg-amber-300 text-black text-xs font-normal flex items-center space-x-2 transition-all shadow-lg cursor-pointer active:scale-95"

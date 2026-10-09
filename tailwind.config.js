@@ -18,8 +18,13 @@ export default {
         'sonar-ping-fast': 'sonarPing 2.5s cubic-bezier(0, 0, 0.2, 1) 0.8s infinite',
         'sonar-ping-outer': 'sonarPing 2.5s cubic-bezier(0, 0, 0.2, 1) 1.6s infinite',
         'pulse-subtle': 'pulseSubtle 3s ease-in-out infinite',
+        'fade-in': 'fadeIn 0.5s ease-out both',
       },
       keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
         sonarPing: {
           '0%': { transform: 'scale(1)', opacity: '0.8' },
           '70%': { transform: 'scale(2.2)', opacity: '0' },

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kalibrasi CSS → piksel screenshot (sementara)</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #000;
+        overflow: hidden;
+      }
+      #tl {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 80px;
+        height: 80px;
+        background: #00ffff;
+      }
+      #mid {
+        position: fixed;
+        left: 600px;
+        top: 300px;
+        width: 60px;
+        height: 60px;
+        background: #ff00ff;
+      }
+      #br {
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        width: 80px;
+        height: 80px;
+        background: #ffff00;
+      }
+      #txt {
+        position: fixed;
+        left: 100px;
+        top: 100px;
+        color: #fff;
+        font: 28px monospace;
+        white-space: pre;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="tl"></div>
+    <div id="mid"></div>
+    <div id="br"></div>
+    <div id="txt">memuat…</div>
+    <script>
+      const vv = window.visualViewport;
+      document.getElementById('txt').textContent =
+        `inner=${innerWidth}x${innerHeight} dpr=${devicePixelRatio}\n` +
+        `client=${document.documentElement.clientWidth}x${document.documentElement.clientHeight}\n` +
+        `screen=${screen.width}x${screen.height} vv=${vv ? vv.width + 'x' + vv.height : 'n/a'}`;
+    </script>
+  </body>
+</html>

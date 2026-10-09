@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Frame viewer (harness kalibrasi SCREEN_RECTS — sementara)</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #000;
+        overflow: hidden;
+      }
+      #wrap {
+        position: absolute;
+        left: -11px;
+        top: 0;
+        width: 1427.6px;
+        height: 803px; /* == mapping runtime: origin (-11,0), box 1427.6x803 */
+      }
+      #frame {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      #grid {
+        position: absolute;
+        left: 0;
+        top: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="wrap"><img id="frame" alt="" /></div>
+    <canvas id="grid" width="1440" height="900"></canvas>
+    <script>
+      const p = new URLSearchParams(location.search);
+      const img = p.get('img') || 'Phone';
+      document.getElementById('frame').src = '/assets/' + img + '.webp';
+
+      const c = document.getElementById('grid').getContext('2d');
+      const W = 1427.6;
+      const H = 803;
+      const X0 = -11;
+
+      c.font = '14px monospace';
+      c.lineWidth = 1;
+      if (p.get('grid') === '0') {
+        // Mode bersih: tanpa grid/rect — untuk ukur bbox objek (flood-fill).
+      } else {
+      // grid 5% (tipis) + 10% (tebal) dalam satuan % terhadap frame
+      for (let i = 0; i <= 20; i++) {
+        const pct = i * 5;
+        const x = X0 + (W * pct) / 100;
+        const major = i % 2 === 0;
+        c.strokeStyle = major ? 'rgba(255,0,255,0.95)' : 'rgba(255,80,80,0.55)';
+        c.beginPath();
+        c.moveTo(x, 0);
+        c.lineTo(x, H);
+        c.stroke();
+        const y = (H * pct) / 100;
+        c.beginPath();
+        c.moveTo(0, y);
+        c.lineTo(1440, y);
+        c.stroke();
+        if (major) {
+          c.fillStyle = '#ffff00';
+          c.fillText(pct + '%', x + 3, 16);
+          if (pct > 0) c.fillText(pct + '%', 3, y - 3);
+        }
+      }
+
+      // overlay rect saat ini (hijau) & kandidat rect (sian) bila diberikan
+      const drawRect = (str, color, label) => {
+        if (!str) return;
+        const [l, t, w, h] = str.split(',').map(Number);
+        c.strokeStyle = color;
+        c.lineWidth = 3;
+        c.strokeRect(X0 + (W * l) / 100, (H * t) / 100, (W * w) / 100, (H * h) / 100);
+        c.fillStyle = color;
+        c.font = 'bold 16px monospace';
+        c.fillText(label + ' ' + str, X0 + (W * l) / 100 + 8, (H * t) / 100 + 22);
+      };
+      drawRect(p.get('rect'), '#00ff66', 'CURRENT');
+      drawRect(p.get('next'), '#00e5ff', 'NEXT');
+      }
+    </script>
+  </body>
+</html>

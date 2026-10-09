@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, ExternalLink, Compass, Disc3 } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Compass, MousePointerClick } from 'lucide-react';
 import TurntableController from './TurntableController';
 
 export default function ObjectOverlay({
@@ -55,8 +55,8 @@ export default function ObjectOverlay({
 
         {/* Right Side: Object Specific Actions */}
         <div className="pointer-events-auto flex flex-col items-stretch sm:items-end gap-2.5 sm:gap-3 animate-fade-in">
-          {/* For Book, Phone, PC, Paper: Open Detail Action */}
-          {objectData.hasDetail && (
+          {/* For Book: generic "Lihat Detail Proyek" action (PC/Paper/Phone entry langsung dari layar/kertas/HP) */}
+          {objectData.hasDetail && !objectData.screenEntry && (
             <button
               onClick={() => onOpenDetail(currentObject)}
               className="group flex items-center justify-center space-x-2.5 px-5 py-3 sm:px-6 sm:py-3.5 rounded-full bg-white text-black hover:bg-neutral-100 transition-all duration-300 shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:shadow-[0_0_40px_rgba(255,255,255,0.5)] cursor-pointer active:scale-95"
@@ -66,6 +66,16 @@ export default function ObjectOverlay({
               </span>
               <ExternalLink className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </button>
+          )}
+
+          {/* For PC, Paper, Phone: hint that the object's own screen is the entry point */}
+          {objectData.screenEntry && (
+            <div className="flex items-center space-x-2.5 px-4 py-2.5 sm:px-5 sm:py-3 rounded-full glass-panel border border-white/15 shadow-2xl backdrop-blur-xl">
+              <MousePointerClick className="w-4 h-4 text-white/85 animate-pulse-subtle" />
+              <span className="text-[11px] sm:text-xs font-extralight text-neutral-200 tracking-wide">
+                {objectData.screenHint}
+              </span>
+            </div>
           )}
 
           {/* For Bike: "Lihat Perjalanan" Action */}

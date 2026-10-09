@@ -4,8 +4,10 @@ import IntroScreen from './components/IntroScreen';
 import DeskScene from './components/DeskScene';
 import NavHotspot from './components/NavHotspot';
 import ObjectOverlay from './components/ObjectOverlay';
+import ObjectScreen from './components/ObjectScreen';
 import BikeModal from './components/BikeModal';
 import ProjectDetail from './components/ProjectDetail';
+import BookLift from './components/BookLift';
 import { soundTrack } from './utils/audioSynth';
 import { MoveHorizontal } from 'lucide-react';
 
@@ -20,8 +22,15 @@ export default function App() {
   const [isBikeModalOpen, setIsBikeModalOpen] = useState(false);
   const [isZoomingToDetail, setIsZoomingToDetail] = useState(false);
   const [showPanHint, setShowPanHint] = useState(false);
+  // Route params for the detail page, so the on-screen previews can jump
+  // straight to a specific project / tab / post.
+  const [detailRoute, setDetailRoute] = useState({});
+  const [isAudioMuted, setIsAudioMuted] = useState(false);
+  // Animasi "mengambil buku dari meja" (Book): null | { phase: 'up'|'down', origin }
+  const [bookLift, setBookLift] = useState(null);
 
   const scrollContainerRef = useRef(null);
+  const sceneCanvasRef = useRef(null); // Canvas 16:9 — jangkar animasi ambil buku
   const preloadedVideos = useRef(new Set());
 
   // Drag interaction states for desktop & mobile smooth pan
@@ -43,6 +52,14 @@ export default function App() {
       });
     }
   }, []);
+
+  // Selalu pusatkan kembali kanvas 16:9 saat viewport berubah ukuran
+  // (scrollLeft lama membuat scene meleset dari tengah setelah resize).
+  useEffect(() => {
+    const handleResize = () => centerDeskViewport(false);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [centerDeskViewport]);
 
   // Check if horizontal scroll is available on Hero and show hint
   useEffect(() => {
@@ -140,8 +157,42 @@ export default function App() {
     }
   };
 
-  // 5. Open Project Detail (Book, Phone, PC, Paper)
-  const handleOpenDetail = (objectId) => {
+  // Hitung kotak buku merah pada frame 16:9 (dalam piksel viewport)
+  // untuk animasi "ambil buku dari meja" — diambil sebelum canvas di-zoom.
+  const computeBookOrigin = () => {
+    const el = sceneCanvasRef.current;
+    const anchor = OBJECTS.Book?.liftAnchor;
+    if (!el || !anchor) return null;
+    const rect = el.getBoundingClientRect();
+    return {
+      left: rect.left + (anchor.left / 100) * rect.width,
+      top: rect.top + (anchor.top / 100) * rect.height,
+      width: (anchor.width / 100) * rect.width,
+      height: (anchor.height / 100) * rect.height,
+    };
+  };
+
+  // 5. Open Project Detail (Book, PC, Paper)
+  // `route` lets the on-screen previews jump straight to a target:
+  // e.g. { view:'project', category:'uiux', itemId:'...' } for PC,
+  // { tab:'about', section:'pengalaman' } for Paper, { projectId } for Book.
+  // Catatan: Phone tidak lewat sini — preview HP berjalan di tempat.
+  const handleOpenDetail = (objectId, route = {}) => {
+    if (bookLift) return;
+    setDetailRoute(route);
+
+    // Book: buku diangkat dari meja dulu, baru detail (buku 3D) muncul
+    if (objectId === 'Book') {
+      const origin = computeBookOrigin();
+      setBookLift({ phase: 'up', origin });
+      setIsZoomingToDetail(true);
+      setTimeout(() => {
+        setAppState('DETAIL');
+        setIsZoomingToDetail(false);
+      }, 800);
+      return;
+    }
+
     setIsZoomingToDetail(true);
     setTimeout(() => {
       setAppState('DETAIL');
@@ -151,6 +202,14 @@ export default function App() {
 
   // 6. Return from Detail back to Object state
   const handleBackFromDetail = () => {
+    // Book: buku diturunkan kembali ke posisi semula di meja
+    if (currentObject === 'Book') {
+      const origin = computeBookOrigin();
+      setAppState('OBJECT');
+      setBookLift({ phase: 'down', origin });
+      centerDeskViewport(false);
+      return;
+    }
     setAppState('OBJECT');
     centerDeskViewport(false);
   };
@@ -234,6 +293,7 @@ export default function App() {
       >
         {/* Unified 16:9 Scene Canvas: Holds Video, Static Image, and Hotspots */}
         <div
+          ref={sceneCanvasRef}
           className={`relative h-full aspect-[16/9] flex items-center justify-center transition-transform duration-500 mx-auto ${
             isZoomingToDetail ? 'scale-125 opacity-0' : 'scale-100 opacity-100'
           }`}
@@ -249,6 +309,14 @@ export default function App() {
             isVideoPlaying={isVideoPlaying}
             onVideoEnded={handleVideoEnded}
           />
+
+          {/* Interactive "screens" pinned on top of the object (monitor / paper / phone) */}
+          {appState === 'OBJECT' && !isVideoPlaying && currentObject && (
+            <ObjectScreen
+              currentObject={currentObject}
+              onOpenDetail={handleOpenDetail}
+            />
+          )}
 
           {/* Desk Hotspot Buttons (Pinned to exact coordinates on the 16:9 canvas) */}
           {isHeroState && (
@@ -267,7 +335,7 @@ export default function App() {
       </div>
 
       {/* 3. Object State Overlay (Kembali ke Hero, Detail Proyek, Bike Modal, Turntable) */}
-      {appState === 'OBJECT' && !isVideoPlaying && currentObject && (
+      {appState === 'OBJECT' && !isVideoPlaying && currentObject && !bookLift && (
         <ObjectOverlay
           currentObject={currentObject}
           objectData={OBJECTS[currentObject]}
@@ -283,11 +351,21 @@ export default function App() {
         onClose={() => setIsBikeModalOpen(false)}
       />
 
+      {/* 4b. Animasi mengambil / menurunkan buku dari meja (Book of Books) */}
+      {bookLift?.origin && (
+        <BookLift
+          phase={bookLift.phase}
+          origin={bookLift.origin}
+          onDone={() => setBookLift(null)}
+        />
+      )}
+
       {/* 5. Project Detail View (<state> Detail) */}
       {appState === 'DETAIL' && currentObject && (
         <ProjectDetail
           objectKey={currentObject}
           objectData={OBJECTS[currentObject]}
+          route={detailRoute}
           onBack={handleBackFromDetail}
         />
       )}
